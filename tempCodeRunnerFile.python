@@ -1,0 +1,6 @@
+import requests
+
+data = {"content": 'print("Hello!")', "syntax": "python", "expiry_days": 1}
+headers = {"User-Agent": "My Python Project"}
+r = requests.post("https://dpaste.com/api/", data=data, headers=headers)
+print(f"URL: {r.text}")
