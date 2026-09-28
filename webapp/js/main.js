@@ -14,10 +14,12 @@ import { initMore } from './more.js';
 applyFont();
 
 // Oyatni ulashish (nusxa olish)
+const BOT_USERNAME = 'oyatlaruzbot'; // bot username (deep-link uchun)
 function shareAyah(n, no) {
   const a = R.curAyahs.find(x => x.numberInSurah === no);
-  const txt = `Qur'on ${n}:${no}\n\n${a ? a.text : ''}`;
-  navigator.clipboard.writeText(txt).then(() => toast('Nusxa olindi')).catch(() => toast('Nusxa olinmadi'));
+  const link = `https://t.me/${BOT_USERNAME}?start=a_${n}_${no}`;
+  const txt = `Qur'on ${n}:${no}\n\n${a ? a.text : ''}\n\n${link}`;
+  navigator.clipboard.writeText(txt).then(() => toast('Havola nusxalandi')).catch(() => toast('Nusxa olinmadi'));
 }
 
 // Inline onclick handlerlari uchun window'ga chiqaramiz

@@ -15,10 +15,12 @@ async function openJuz(j) {
   show('reader');
   document.getElementById('readerHead').innerHTML = `<div style="text-align:center" class="big">${j}-juz</div>`;
   document.getElementById('ayahBox').innerHTML = '<div class="spin"></div>';
-  const eds = ['quran-uthmani', S.translation];
   try {
-    const res = await jget(`${API}/juz/${j}/editions/${eds.join(',')}`);
-    const ar = res[0], tr = res[1];
+    // /juz/{n}/editions/... API'da yo'q — ikkita alohida so'rovni birlashtiramiz
+    const [ar, tr] = await Promise.all([
+      jget(`${API}/juz/${j}/quran-uthmani`),
+      jget(`${API}/juz/${j}/${S.translation}`),
+    ]);
     document.getElementById('ayahBox').innerHTML = ar.ayahs.map((a, i) => `<div class="ayah" id="ayah-${a.number}" data-gid="${a.number}">
       <div class="head"><span class="badge">${a.surah.number}:${a.numberInSurah}</span></div>
       ${S.arabic ? `<div class="arabic">${a.text}</div>` : ''}
