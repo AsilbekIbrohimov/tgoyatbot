@@ -10,91 +10,82 @@ from states.searcherState import OyatRead
 from data.suralist import suralist
 from utils.get_link import get_link
 from utils.ayah_text import get_ayah_text
-from keyboards.default.readKeyboard import readKeyboard
+from utils.i18n import t, Btn, read_kb, sura_kb, sura_kb_for
 from keyboards.inline.ContinueKeyboard import ContinueKeyboard
-from .common import (
-    BTN_BACK, BTN_NEXT, BTN_PREV, answertext, ayah_count, resolve_sura, sura_keyboard,
-)
-from keyboards.default.suralistKeyboard import suraKeyboard1, suraKeyboard2
+from .common import ayah_count, resolve_sura
 
 read_router = Router()
-
-BTN_SURA_AUDIO = '🎧 Butun sura audiosi'
 
 _DIGIT = re.compile(r'^\d{1,3}$')
 _RANGE = re.compile(r'^(\d{1,3})-(\d{1,3})$')
 _LIST = re.compile(r'^\d{1,3}(,\d{1,3})+$')
-PAGE_LIMIT = 50  # 50 oyatdan keyin "Davomi..." taklif qilamiz
+PAGE_LIMIT = 50
 
 
 async def _send_verse(message: Message, sura, ayah, text_ed, reciter):
     text = await get_ayah_text(sura, ayah, text_ed)
     link = await get_link(sura, ayah, reciter)
-    await message.answer(f"{suralist[sura - 1]} surasi {ayah}-oyat\n\n{text}{link}")
+    await message.answer(f"{suralist[sura - 1]} — {ayah}\n\n{text}{link}")
 
 
-# --- Sura tanlash ---
-@read_router.message(OyatRead.choose_sura, F.text == BTN_NEXT)
+@read_router.message(OyatRead.choose_sura, Btn('b_next'))
 async def next_page(message: Message):
-    await message.answer("O'zingizga kerakli surani kiriting", reply_markup=suraKeyboard2)
+    await message.answer("→", reply_markup=sura_kb(2, db.get_ui_lang(message.from_user.id)))
 
 
-@read_router.message(OyatRead.choose_sura, F.text == BTN_PREV)
+@read_router.message(OyatRead.choose_sura, Btn('b_prev'))
 async def prev_page(message: Message):
-    await message.answer("O'zingizga kerakli surani kiriting", reply_markup=suraKeyboard1)
+    await message.answer("←", reply_markup=sura_kb(1, db.get_ui_lang(message.from_user.id)))
 
 
 @read_router.message(OyatRead.choose_sura, F.text)
 async def choose_sura(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     sura = resolve_sura(message.text)
     if not sura:
-        await message.answer("Sura topilmadi. Raqam (1-114) yoki nomini kiriting.")
+        await message.answer(t('m_sura_not_found', lang))
         return
     soni = ayah_count(sura)
     await state.update_data(sura=sura, soni=soni)
     await state.set_state(OyatRead.reading)
-    await message.answer(answertext(soni, sura), reply_markup=readKeyboard)
+    await message.answer(t('m_ayah_info', lang, name=suralist[sura - 1], soni=soni),
+                         reply_markup=read_kb(lang))
 
 
-# --- Oyat o'qish ---
-@read_router.message(OyatRead.reading, F.text == BTN_BACK)
+@read_router.message(OyatRead.reading, Btn('b_back'))
 async def back_to_choose(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     data = await state.get_data()
     await state.set_state(OyatRead.choose_sura)
-    await message.answer(
-        "o'zingizga kerakli surani tanlang",
-        reply_markup=sura_keyboard(data.get("sura", 1)),
-    )
+    await message.answer(t('m_choose_sura', lang), reply_markup=sura_kb_for(data.get("sura", 1), lang))
 
 
-@read_router.message(OyatRead.reading, F.text == BTN_SURA_AUDIO)
+@read_router.message(OyatRead.reading, Btn('b_sura_audio'))
 async def surah_audio(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     data = await state.get_data()
     sura = data.get("sura")
     if not sura:
         return
     reciter = db.get_reciter(message.from_user.id)
-    # audio-surah CDN faqat asosiy edition'larni qo'llaydi ('-2' variantsiz)
     for ed in (reciter, reciter.replace('-2', '')):
         url = f"https://cdn.islamic.network/quran/audio-surah/128/{ed}/{sura}.mp3"
         try:
-            await message.answer_audio(url, title=f"{suralist[sura - 1]} surasi")
+            await message.answer_audio(url, title=f"{suralist[sura - 1]}")
             return
         except Exception:
             continue
-    await message.answer(
-        "Bu qori uchun butun sura audiosi mavjud emas yoki sura juda uzun. "
-        "Sozlamalar → Qiroat orqali boshqa qorini tanlab ko'ring."
-    )
+    await message.answer(t('m_sura_audio_na', lang))
 
 
 @read_router.message(OyatRead.reading, F.text)
 async def read_ayah(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     data = await state.get_data()
     sura, soni = data.get("sura"), data.get("soni", 0)
     if not sura:
-        await message.answer("Avval surani tanlang.")
         await state.set_state(OyatRead.choose_sura)
+        await message.answer(t('m_choose_sura', lang))
         return
 
     uid = message.from_user.id
@@ -105,24 +96,24 @@ async def read_ayah(message: Message, state: FSMContext):
     if _DIGIT.match(text):
         n = int(text)
         if n < 1 or n > soni:
-            await message.answer(f"1 dan {soni} gacha raqam kiriting")
+            await message.answer(t('m_num_range', lang, soni=soni))
             return
         await _send_verse(message, sura, n, text_ed, reciter)
         return
 
     m = _RANGE.match(text)
     if m:
-        start_a, end_a = int(m.group(1)), int(m.group(2))
-        if start_a < 1 or end_a > soni or start_a > end_a:
-            await message.answer("Nato'g'ri kiritdingiz")
+        a1, a2 = int(m.group(1)), int(m.group(2))
+        if a1 < 1 or a2 > soni or a1 > a2:
+            await message.answer(t('m_range_invalid', lang))
             return
-        cur = start_a
-        while cur <= end_a:
+        cur = a1
+        while cur <= a2:
             await _send_verse(message, sura, cur, text_ed, reciter)
             await asyncio.sleep(1.0)
-            if cur % PAGE_LIMIT == 0 and cur != end_a:
-                await state.update_data(cur=cur + 1, end=end_a)
-                await message.answer("Davomomini ko'rishni xoxlaysizmi?", reply_markup=ContinueKeyboard)
+            if cur % PAGE_LIMIT == 0 and cur != a2:
+                await state.update_data(cur=cur + 1, end=a2)
+                await message.answer(t('m_continue_q', lang), reply_markup=ContinueKeyboard)
                 return
             cur += 1
         return
@@ -135,15 +126,16 @@ async def read_ayah(message: Message, state: FSMContext):
                 await asyncio.sleep(0.4)
         return
 
-    await message.answer("Natog'ri kiritdingiz")
+    await message.answer(t('m_invalid', lang))
 
 
 @read_router.callback_query(OyatRead.reading, F.data == "davomi")
 async def continue_reading(call: CallbackQuery, state: FSMContext):
+    lang = db.get_ui_lang(call.from_user.id)
     data = await state.get_data()
     sura, cur, end = data.get("sura"), data.get("cur"), data.get("end")
     if not (sura and cur and end):
-        await call.answer("Davomi topilmadi.", show_alert=True)
+        await call.answer("—", show_alert=True)
         return
     await call.message.delete()
     uid = call.from_user.id
@@ -154,7 +146,7 @@ async def continue_reading(call: CallbackQuery, state: FSMContext):
         await asyncio.sleep(0.4)
         if cur % PAGE_LIMIT == 0 and cur != end:
             await state.update_data(cur=cur + 1, end=end)
-            await call.message.answer("Davomomini ko'rishni xoxlaysizmi?", reply_markup=ContinueKeyboard)
+            await call.message.answer(t('m_continue_q', lang), reply_markup=ContinueKeyboard)
             await call.answer()
             return
         cur += 1

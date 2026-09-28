@@ -7,69 +7,63 @@ from states.searcherState import SuraSearch
 from data.suralist import suralist
 from utils.searcher import make
 from utils.searcher2 import search2
-from keyboards.default.mainMenuKeyboard import mainAndbackKeyboard
-from keyboards.default.suralistKeyboard import suraKeyboard1, suraKeyboard2
-from .common import BTN_BACK, BTN_NEXT, BTN_PREV, ayah_count, resolve_sura, sura_keyboard
+from utils.i18n import t, Btn, read_kb, sura_kb, sura_kb_for
+from .common import ayah_count, resolve_sura
 from . import pager
 
 sura_search_router = Router()
-
 NO_RESULT = ('қидирув натижаси мавжуд эмас', 'qidiruv natijasi mavjud emas')
 
 
-@sura_search_router.message(SuraSearch.choose_sura, F.text == BTN_NEXT)
+@sura_search_router.message(SuraSearch.choose_sura, Btn('b_next'))
 async def next_page(message: Message):
-    await message.answer("O'zingizga kerakli surani kiriting", reply_markup=suraKeyboard2)
+    await message.answer("→", reply_markup=sura_kb(2, db.get_ui_lang(message.from_user.id)))
 
 
-@sura_search_router.message(SuraSearch.choose_sura, F.text == BTN_PREV)
+@sura_search_router.message(SuraSearch.choose_sura, Btn('b_prev'))
 async def prev_page(message: Message):
-    await message.answer("O'zingizga kerakli surani kiriting", reply_markup=suraKeyboard1)
+    await message.answer("←", reply_markup=sura_kb(1, db.get_ui_lang(message.from_user.id)))
 
 
 @sura_search_router.message(SuraSearch.choose_sura, F.text)
 async def choose_sura(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     sura = resolve_sura(message.text)
     if not sura:
-        await message.answer("Sura topilmadi. Raqam (1-114) yoki nomini kiriting.")
+        await message.answer(t('m_sura_not_found', lang))
         return
     await state.update_data(sura=sura, soni=ayah_count(sura))
     await state.set_state(SuraSearch.searching)
-    await message.answer(
-        f"Siz {suralist[sura - 1]} surasini tanladingiz. Shu suradan qidirish uchun matn kiriting.",
-        reply_markup=mainAndbackKeyboard,
-    )
+    await message.answer(t('m_search_prompt', lang), reply_markup=read_kb(lang))
 
 
-@sura_search_router.message(SuraSearch.searching, F.text == BTN_BACK)
+@sura_search_router.message(SuraSearch.searching, Btn('b_back'))
 async def back_to_choose(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     data = await state.get_data()
     await state.set_state(SuraSearch.choose_sura)
-    await message.answer(
-        "o'zingizga kerakli surani tanlang",
-        reply_markup=sura_keyboard(data.get("sura", 1)),
-    )
+    await message.answer(t('m_choose_sura', lang), reply_markup=sura_kb_for(data.get("sura", 1), lang))
 
 
 @sura_search_router.message(SuraSearch.searching, F.text)
 async def do_search(message: Message, state: FSMContext):
+    lang = db.get_ui_lang(message.from_user.id)
     data = await state.get_data()
     sura = data.get("sura")
     if not sura:
         await state.set_state(SuraSearch.choose_sura)
-        await message.answer("Avval surani tanlang.")
+        await message.answer(t('m_choose_sura', lang))
         return
     await message.bot.send_chat_action(message.chat.id, "typing")
     placeholder = await message.reply('🔎')
-    text = message.text[:40]
-    searched = await search2(sura, text, trans=db.get_trans(message.from_user.id))
+    searched = await search2(sura, message.text[:40], trans=db.get_trans(message.from_user.id))
     if searched[0] in NO_RESULT:
-        await placeholder.edit_text(searched[0])
+        await placeholder.edit_text(t('m_no_result', lang))
         return
     maked = await make(searched)
-    await pager.show_first(placeholder, state, maked, len(searched))
+    await pager.show_first(placeholder, state, maked, len(searched), lang)
 
 
 @sura_search_router.callback_query(SuraSearch.searching, F.data.in_({"-1", "1"}))
 async def paginate(call: CallbackQuery, state: FSMContext):
-    await pager.paginate(call, state)
+    await pager.paginate(call, state, db.get_ui_lang(call.from_user.id))
