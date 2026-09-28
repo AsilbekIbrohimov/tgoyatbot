@@ -10,6 +10,7 @@ import { toggleBookmark, showBookmarks } from './bookmarks.js';
 import { initSearch } from './search.js';
 import { initPrayer } from './prayer.js';
 import { initMore } from './more.js';
+import { initAdmin } from './adminpanel.js';
 
 applyFont();
 
@@ -43,3 +44,4 @@ initPrayer();
 initMore(showBookmarks);
 initEditions();
 initSuras();
+initAdmin();

@@ -18,3 +18,7 @@ WEBAPP_URL = env.str("WEBAPP_URL", "https://asilbekibrohimov.github.io/oyatbot/w
 
 # Admin panel paroli (.env dagi ADMIN_PASSWORD dan o'qiladi)
 ADMIN_PASSWORD = env.str("ADMIN_PASSWORD", "rtwgjmja")
+
+# Mini App admin backend (aiohttp) porti va yoqilishi
+WEBAPP_API_PORT = env.int("WEBAPP_API_PORT", 8080)
+WEBAPP_API_ENABLED = env.bool("WEBAPP_API_ENABLED", True)

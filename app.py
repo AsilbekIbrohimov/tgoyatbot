@@ -28,6 +28,18 @@ async def on_startup():
     await on_startup_notify(bot)
 
 
+async def _start_web():
+    """Mini App admin backendini (aiohttp) ishga tushiradi."""
+    from aiohttp import web
+    from utils.webserver import create_app
+    from data.config import WEBAPP_API_PORT
+    runner = web.AppRunner(create_app())
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', WEBAPP_API_PORT)
+    await site.start()
+    logging.info("Admin backend http://0.0.0.0:%s da ishga tushdi", WEBAPP_API_PORT)
+
+
 async def main():
     # Middleware'lar
     middlewares.setup(dp)
@@ -38,6 +50,14 @@ async def main():
     dp.include_router(handlers.errors_router)
 
     await on_startup()
+
+    from data.config import WEBAPP_API_ENABLED
+    if WEBAPP_API_ENABLED:
+        try:
+            await _start_web()
+        except Exception as err:
+            logging.exception(err)
+
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
