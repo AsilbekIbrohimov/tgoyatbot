@@ -1,14 +1,19 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-
 Adminkeyboard = ReplyKeyboardMarkup(
-    keyboard = [
+    keyboard=[
         [
-            KeyboardButton(text='Allusers'),
-            KeyboardButton(text='Check users'),
+            KeyboardButton(text='📊 Statistika'),
+            KeyboardButton(text='📢 Reklama'),
         ],
         [
-            KeyboardButton(text='Reklama'),
+            KeyboardButton(text='📥 Foydalanuvchilar'),
+            KeyboardButton(text='✅ Tekshirish'),
+        ],
+        [
+            KeyboardButton(text='🗑 Bazani tozalash'),
+        ],
+        [
             KeyboardButton(text='🔝 Asosiy Menyu'),
         ],
     ],

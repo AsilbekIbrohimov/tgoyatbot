@@ -51,6 +51,11 @@ class Database:
                 "ALTER TABLE Users ADD COLUMN text_ed varchar(40) DEFAULT 'local.sodiq'",
                 commit=True,
             )
+        if "ui_lang" not in cols:
+            self.execute(
+                "ALTER TABLE Users ADD COLUMN ui_lang varchar(5) DEFAULT 'uz'",
+                commit=True,
+            )
 
     @staticmethod
     def format_args(sql, parameters: dict):
@@ -92,6 +97,13 @@ class Database:
         return self.execute(
             "UPDATE Users SET reciter=? WHERE id=?", parameters=(reciter, id), commit=True
         )
+
+    def get_ui_lang(self, id: int) -> str:
+        row = self.execute("SELECT ui_lang FROM Users WHERE id = ?", parameters=(id,), fetchone=True)
+        return row[0] if row and row[0] else 'uz'
+
+    def update_user_ui_lang(self, lang: str, id: int):
+        return self.execute("UPDATE Users SET ui_lang=? WHERE id=?", parameters=(lang, id), commit=True)
 
     def get_text_ed(self, id: int) -> str:
         """Foydalanuvchi tanlagan matn edition'i. Topilmasa standart."""

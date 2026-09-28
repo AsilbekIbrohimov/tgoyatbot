@@ -15,3 +15,6 @@ BOT_ID=[5268428809,5419255283]#env.list('BOT_ID')
 # Telegram Mini App (WebApp) manzili — HTTPS bo'lishi shart.
 # Deploy qilgach o'zgartiring yoki .env da WEBAPP_URL bering.
 WEBAPP_URL = env.str("WEBAPP_URL", "https://asilbekibrohimov.github.io/oyatbot/webapp/")
+
+# Admin panel paroli (.env dagi ADMIN_PASSWORD dan o'qiladi)
+ADMIN_PASSWORD = env.str("ADMIN_PASSWORD", "rtwgjmja")
