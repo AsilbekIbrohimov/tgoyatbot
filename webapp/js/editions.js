@@ -7,7 +7,7 @@ export async function initEditions() {
   try {
     const eds = await jget(API + '/edition?type=translation');
     const sel = document.getElementById('setTrans');
-    const pri = ['en.sahih', 'ru.kuliev', 'tr.diyanet', 'ur.jalandhry', 'fr.hamidullah', 'id.indonesian', 'de.aburida'];
+    const pri = ['de.aburida', 'id.indonesian', 'fr.hamidullah', 'ur.jalandhry', 'tr.diyanet', 'ru.kuliev', 'en.sahih', 'uz.sodik'];
     eds.sort((a, b) => (pri.indexOf(b.identifier) - pri.indexOf(a.identifier)) || a.language.localeCompare(b.language));
     sel.innerHTML = eds.map(e => `<option value="${e.identifier}">${e.language.toUpperCase()} — ${e.englishName}</option>`).join('');
     sel.value = S.translation;

@@ -5,7 +5,7 @@ export const CDN_AYAH = (rec, n) => `https://cdn.islamic.network/quran/audio/128
 export const CDN_SURA = (rec, n) => `https://cdn.islamic.network/quran/audio-surah/128/${rec}/${n}.mp3`;
 
 export const DEFAULTS = {
-  translation: 'en.sahih',
+  translation: 'uz.sodik',
   reciter: 'ar.alafasy',
   translit: true,   // lotincha o'qilishi standart yoqilgan
   arabic: true,
