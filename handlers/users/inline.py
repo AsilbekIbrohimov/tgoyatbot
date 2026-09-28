@@ -3,7 +3,6 @@ import re
 from aiogram import Router
 from aiogram.types import (
     InlineQuery, InlineQueryResultArticle, InputTextMessageContent,
-    InlineQueryResultAudio,
 )
 
 from loader import db
@@ -43,16 +42,15 @@ async def inline_query(q: InlineQuery):
         sura, ayah = int(m.group(1)), int(m.group(2))
         if 1 <= sura <= 114 and 1 <= ayah <= AYAH_COUNTS.get(sura, 0):
             text = await get_ayah_text(sura, ayah, text_ed)
-            body = f"{suralist[sura - 1]} — {sura}:{ayah}\n\n{text}"
             g = _global_ayah(sura, ayah)
+            # Audio — ko'rinmas belgi (zero-width) tagidagi yashirin havola
+            hidden = f"<a href='{CDN(reciter, g)}'>{chr(8203)}</a>"
+            body = f"{suralist[sura - 1]} — {sura}:{ayah}\n\n{text}{hidden}"
             results.append(InlineQueryResultArticle(
                 id=f"a{sura}_{ayah}", title=f"{suralist[sura - 1]} {sura}:{ayah}",
                 description=text[:90],
-                input_message_content=InputTextMessageContent(message_text=body),
-            ))
-            results.append(InlineQueryResultAudio(
-                id=f"au{sura}_{ayah}", audio_url=CDN(reciter, g),
-                title=f"{suralist[sura - 1]} {sura}:{ayah}", performer=reciter,
+                input_message_content=InputTextMessageContent(
+                    message_text=body, parse_mode="HTML"),
             ))
             await q.answer(results, cache_time=60, is_personal=True)
             return
