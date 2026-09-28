@@ -61,12 +61,13 @@ async def inline_query(q: InlineQuery):
         found = await search(query, trans=trans)
         if found and found[0] not in ('қидирув натижаси мавжуд эмас', 'qidiruv natijasi mavjud emas'):
             for i, item in enumerate(found[:20]):
-                snippet = _strip_arabic(item.split('\n', 1)[-1])
-                if not snippet:
+                full = item.split('\n', 1)[-1]          # arabcha + tarjima (yuboriladi)
+                preview = _strip_arabic(full)            # faqat qidirilgan til (ro'yxatda)
+                if not preview:
                     continue
                 results.append(InlineQueryResultArticle(
-                    id=f"s{i}", title=f"{i + 1}. {snippet[:40]}", description=snippet[:100],
-                    input_message_content=InputTextMessageContent(message_text=snippet),
+                    id=f"s{i}", title=f"{i + 1}. {preview[:40]}", description=preview[:100],
+                    input_message_content=InputTextMessageContent(message_text=full),
                 ))
 
     if not results:
