@@ -16,6 +16,13 @@ inline_router = Router()
 
 _REF = re.compile(r'^\s*(\d{1,3})[:\s.-](\d{1,3})\s*$')
 CDN = lambda rec, g: f"https://cdn.islamic.network/quran/audio/128/{rec}/{g}.mp3"
+# Arab yozuvi (harflar + diakritik belgilar) — inline natijadan olib tashlanadi
+_ARABIC = re.compile(r'[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]+')
+
+
+def _strip_arabic(s: str) -> str:
+    s = _ARABIC.sub('', s)
+    return re.sub(r'\s+', ' ', s).strip()
 
 
 def _global_ayah(sura, ayah):
@@ -56,9 +63,11 @@ async def inline_query(q: InlineQuery):
         found = await search(query, trans=trans)
         if found and found[0] not in ('қидирув натижаси мавжуд эмас', 'qidiruv natijasi mavjud emas'):
             for i, item in enumerate(found[:20]):
-                snippet = item.split('\n', 1)[-1]
+                snippet = _strip_arabic(item.split('\n', 1)[-1])
+                if not snippet:
+                    continue
                 results.append(InlineQueryResultArticle(
-                    id=f"s{i}", title=f"Natija {i + 1}", description=snippet[:90],
+                    id=f"s{i}", title=f"{i + 1}. {snippet[:40]}", description=snippet[:100],
                     input_message_content=InputTextMessageContent(message_text=snippet),
                 ))
 
