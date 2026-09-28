@@ -1,92 +1,104 @@
-
-from states.adminState import AdminState
-from aiogram.types import ContentType
-from loader import bot
 import asyncio
-from keyboards.default.forstartKeyboard import startKeyboard
-from keyboards.default.mainMenuKeyboard import mainMenuKeyboard, mainAndbackKeyboard
-from keyboards.default.adminkeyboards import Adminkeyboard
-from aiogram import types
-from aiogram.dispatcher import FSMContext
+
+from aiogram import Router, F
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, FSInputFile
+
+from loader import bot, db
 from data.config import ADMINS
-from loader import dp, db, bot
-from aiogram.types import InputFile
-@dp.message_handler(text="/admin", user_id=ADMINS, state = '*')
-async def parol(message: types.Message, state: FSMContext):
+from states.adminState import AdminState
+from keyboards.default.mainMenuKeyboard import mainMenuKeyboard
+from keyboards.default.adminkeyboards import Adminkeyboard
+
+admin_router = Router()
+
+PASSWORD = "rtwgjmja"  # TODO: .env fayliga ko'chirish tavsiya etiladi
+
+
+@admin_router.message(Command("admin"), F.from_user.id.in_(ADMINS), StateFilter("*"))
+async def ask_password(message: Message, state: FSMContext):
     await message.answer("parolni kiriting", reply_markup=mainMenuKeyboard)
-    await state.set_state('parol')
+    await state.set_state(AdminState.parol)
 
 
-
-@dp.message_handler(text="rtwgjmja", user_id=ADMINS, state = 'parol')
-async def admin(message: types.Message):
+@admin_router.message(AdminState.parol, F.from_user.id.in_(ADMINS), F.text == PASSWORD)
+async def open_panel(message: Message, state: FSMContext):
     await message.delete()
-    await message.answer("Admin panel\n\nAdmin komandalar\n/allusers - bazadagi obunachilar soni, txt va db fayllari\n/checkusers - botdagi faol va o'chirilgan akkauntlar sonini aniqlash\n/reklama - reklama tarqatish, sekundiga 20 ta reklama\ncleandb - bazani tozalash", reply_markup=Adminkeyboard)
-    await AdminState.admin.set()
+    await message.answer(
+        "Admin panel\n\nAdmin komandalar\n"
+        "/allusers - bazadagi obunachilar soni, txt va db fayllari\n"
+        "/checkusers - botdagi faol va o'chirilgan akkauntlar sonini aniqlash\n"
+        "/reklama - reklama tarqatish\n"
+        "/cleandb - bazani tozalash",
+        reply_markup=Adminkeyboard,
+    )
+    await state.set_state(AdminState.admin)
 
-@dp.message_handler(user_id=ADMINS, state = 'parol')
-async def FalsePassword(message: types.Message):
-    # await bot. #(text = "parol nato'g'ri")
 
+@admin_router.message(AdminState.parol, F.from_user.id.in_(ADMINS))
+async def wrong_password(message: Message):
     a = await message.answer("parol nato'g'ri")
     await asyncio.sleep(2)
-    await message.delete()
-    await a.delete()
+    try:
+        await message.delete()
+        await a.delete()
+    except Exception:
+        pass
 
 
-
-@dp.message_handler(text=["Allusers", '/allusers'], state=AdminState.admin)
-async def allusers(message: types.Message):
+@admin_router.message(AdminState.admin, F.text.in_({"Allusers", "/allusers"}))
+async def all_users(message: Message):
     users = db.select_all_users()
     await message.answer(f"Bazada {len(users)} ta foydalanuvchi bor.")
-    with open('users.txt', 'w',encoding="utf-8") as file:
+    with open('users.txt', 'w', encoding="utf-8") as file:
         file.write(str(users))
-    await message.answer_document(InputFile('users.txt'))
-    await message.answer_document(InputFile(path_or_bytesio='data/main.db'))
-    # await message.answer(users)
+    await message.answer_document(FSInputFile('users.txt'))
+    await message.answer_document(FSInputFile('data/main.db'))
 
-@dp.message_handler(text=["Check users", '/checkusers'], state=AdminState.admin)
-async def checkusers(message: types.Message):
+
+@admin_router.message(AdminState.admin, F.text.in_({"Check users", "/checkusers"}))
+async def check_users(message: Message):
     await message.answer("Tekshirish boshlandi")
     users = db.select_all_users()
-    sended = 0
-    unsended = 0
+    sended = unsended = 0
     for user in users:
-        userid = user[0]
         try:
-            await bot.send_chat_action(chat_id = userid, action="typing")
-            sended +=1
+            await bot.send_chat_action(chat_id=user[0], action="typing")
+            sended += 1
             await asyncio.sleep(0.05)
-        except Exception as err:
-            unsended +=1
-            print(err)
-        
-    
-    await message.answer(f"{sended} ta foydalanuvchi aktiv. {unsended} ta foydalanuvchi o'chirilgan.")
-@dp.message_handler(text=["/reklama", "Reklama"], user_id=ADMINS, state = AdminState.admin)
-async def send_ad_to_all(message: types.Message, state = FSMContext):
+        except Exception:
+            unsended += 1
+    await message.answer(
+        f"{sended} ta foydalanuvchi aktiv. {unsended} ta foydalanuvchi o'chirilgan."
+    )
+
+
+@admin_router.message(AdminState.admin, F.text.in_({"/reklama", "Reklama"}))
+async def ask_ad(message: Message, state: FSMContext):
     await message.answer('reklama yuboring', reply_markup=mainMenuKeyboard)
+    await state.set_state(AdminState.reklama)
 
-    await state.set_state('reklama')
-@dp.message_handler(state = 'reklama', content_types=ContentType.ANY)
-async def send_ad(message: types.Message, state = FSMContext):
+
+@admin_router.message(AdminState.reklama)
+async def send_ad(message: Message, state: FSMContext):
     users = db.select_all_users()
-    sended = 0
-    unsended = 0
+    sended = unsended = 0
     for user in users:
-        userid = user[0]
         try:
-            await message.send_copy(chat_id = userid)
-            sended +=1
+            await message.send_copy(chat_id=user[0])
+            sended += 1
             await asyncio.sleep(0.05)
-        except Exception as err:
-            unsended +=1
-            # await bot.send_message(chat_id = ADMINS[0], text = f"{err}")
-            print(err)
-    await message.answer(f"reklama {sended} ta odamga yuborildi, {unsended} ta odamga yuborib bo'lmadi", reply_markup=Adminkeyboard)
-    await AdminState.admin.set()
+        except Exception:
+            unsended += 1
+    await message.answer(
+        f"reklama {sended} ta odamga yuborildi, {unsended} ta odamga yuborib bo'lmadi",
+        reply_markup=Adminkeyboard,
+    )
+    await state.set_state(AdminState.admin)
 
-@dp.message_handler(text="/cleandb", user_id=ADMINS, state=AdminState.admin)
-async def get_all_users(message: types.Message):
+
+@admin_router.message(AdminState.admin, F.text == "/cleandb")
+async def clean_db(message: Message):
     db.delete_users()
     await message.answer("Baza tozalandi!")

@@ -129,3 +129,14 @@ dmypy.json
 .pyre/
 .idea/*
 .env
+# Maxfiy / shaxsiy fayllar (yuklanmasin)
+gifts_session.session
+*.session
+users.txt
+data/main.db
+free_usernames.txt
+sura_username_candidates.txt
+find_username.py
+check_from_file.py
+logfile.log
+logfile_err.log

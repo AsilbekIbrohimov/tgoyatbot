@@ -1,40 +1,38 @@
+import asyncio
+
+from rapidfuzz import fuzz
+
 from .is_latin import islatin
 from data.qurandict import qurandict
 from data.qurandict2 import qurandict2
-#from quranuz import quran
-from fuzzywuzzy import fuzz
 from .transliterate import to_cyrillic, to_latin
 
 
-async def search2(sura, matn, accuracy=70, trans=0):
-# def search2(sura, matn, accuracy=70):
-    quran = {}
-    if not trans:
-        quran = qurandict
-    else:
-        quran = qurandict2
-    text = await to_cyrillic(matn)
+def _scan(oyatlar, text, accuracy):
+    text_low = text.lower()
     res = {}
-    for oyat in quran[str(sura)]:
-        
-        if fuzz.partial_ratio(oyat["text"].lower(), text.lower())>=accuracy:
-            res[f"{oyat['text']} [{oyat['chapter']}:{oyat['verse']}]"] = fuzz.partial_ratio(text.lower(), oyat["text"].lower())
-    
-    res =  sorted(res.items(), key=lambda item: item[1], reverse = True)
+    for oyat in oyatlar:
+        score = fuzz.partial_ratio(oyat["text"].lower(), text_low)
+        if score >= accuracy:
+            res[f"{oyat['text']} [{oyat['chapter']}:{oyat['verse']}]"] = score
+    return sorted(res.items(), key=lambda item: item[1], reverse=True)
+
+
+async def search2(sura, matn, accuracy=70, trans=0):
+    quran = qurandict2 if trans else qurandict
+    text = await to_cyrillic(matn)
+    res = await asyncio.to_thread(_scan, quran[str(sura)], text, accuracy)
+
+    latin = await islatin(matn)
     answer = []
-    tartib = 1
-    if await islatin(matn):
-        for i in res:
-            answer.append(f"{tartib}.\n{await to_latin(i[0])}")
-            tartib += 1
-    else:
-            for i in res:
-                answer.append(f"{tartib}.\n{i[0]}")
-                tartib += 1
+    for tartib, (line, _score) in enumerate(res, start=1):
+        if latin:
+            answer.append(f"{tartib}.\n{await to_latin(line)}")
+        else:
+            answer.append(f"{tartib}.\n{line}")
+
     if answer:
         return answer
-    
-    elif await islatin(matn):
+    if latin:
         return ["qidiruv natijasi mavjud emas"]
-    else:
-        return ['қидирув натижаси мавжуд эмас']
+    return ['қидирув натижаси мавжуд эмас']

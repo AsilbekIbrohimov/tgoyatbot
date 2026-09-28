@@ -1,5 +1,3 @@
-from email import message
-#from email.headerregistry import MessageIDHeader
 import sqlite3
 
 
@@ -15,7 +13,6 @@ class Database2:
         if not parameters:
             parameters = ()
         connection = self.connection
-        connection.set_trace_callback(logger)
         cursor = connection.cursor()
         data = None
         cursor.execute(sql, parameters)
@@ -47,29 +44,13 @@ class Database2:
         return sql, tuple(parameters.values())
 
     def add_message(self, message_id: int, user_id: int):
-        # SQL_EXAMPLE = "INSERT INTO Users(id, Name, email) VALUES(1, 'John', 'John@gmail.com')"
-
-        sql = """
-        INSERT INTO Messages(message_id, user_id) VALUES(?, ?)
-        """
+        sql = "INSERT OR IGNORE INTO Messages(message_id, user_id) VALUES(?, ?)"
         self.execute(sql, parameters=(message_id, user_id), commit=True)
 
     def select_message(self, **kwargs):
-        # SQL_EXAMPLE = "SELECT * FROM Users where id=1 AND Name='John'"
         sql = "SELECT * FROM Messages WHERE "
         sql, parameters = self.format_args(sql, kwargs)
-
         return self.execute(sql, parameters=parameters, fetchone=True)
 
     def count_messages(self):
-        return self.execute("SELECT COUNT(*) FROM Users;", fetchone=True)
-
-
-def logger(statement):
-    pass
-#     print(f"""
-# _____________________________________________________        
-# Executing: 
-# {statement}
-# _____________________________________________________
-# """)
+        return self.execute("SELECT COUNT(*) FROM Messages;", fetchone=True)

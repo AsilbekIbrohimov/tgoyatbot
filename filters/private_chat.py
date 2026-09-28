@@ -1,7 +1,8 @@
-from aiogram import types
-from aiogram.dispatcher.filters import BoundFilter
+from aiogram.filters import BaseFilter
+from aiogram.types import Message
+from aiogram.enums import ChatType
 
 
-class IsPrivate(BoundFilter):
-    async def check(self, message: types.Message):
-        return message.chat.type == types.ChatType.PRIVATE
+class IsPrivate(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        return message.chat.type == ChatType.PRIVATE

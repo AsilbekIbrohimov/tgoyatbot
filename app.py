@@ -1,24 +1,49 @@
-from aiogram import executor
-from loader import dp, db, bot, db2
-import middlewares, handlers
-from data.config import ADMINS#, #filters
-from utils.notify_admins import on_startup_notify
-from utils.set_bot_commands import set_default_commands
-async def on_startup(dispatcher):
-    # Birlamchi komandalar (/star va /help)
-    await set_default_commands(dispatcher)
+import asyncio
+import logging
 
-    # Ma'lumotlar bazasini yaratamiz:
+import utils.misc.logging  # noqa: F401  (logging sozlamasi)
+from aiogram.types import MenuButtonWebApp, WebAppInfo
+from loader import bot, dp, db, db2
+import middlewares
+import handlers
+from data.config import WEBAPP_URL
+from utils.set_bot_commands import set_default_commands
+from utils.notify_admins import on_startup_notify
+
+
+async def on_startup():
+    await set_default_commands(bot)
+    # Chap-pastdagi "menu" tugmasini Mini App'ga bog'laymiz
+    try:
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text="Qur'on", web_app=WebAppInfo(url=WEBAPP_URL))
+        )
+    except Exception as err:
+        logging.exception(err)
     try:
         db.create_table_users()
         db2.create_table_messages()
     except Exception as err:
-        print(err)
-        await bot.send_message(chat_id = ADMINS[0], text = str(err))
+        logging.exception(err)
+    await on_startup_notify(bot)
 
-    # Bot ishga tushgani haqida adminga xabar berish
-    await on_startup_notify(dispatcher)
+
+async def main():
+    # Middleware'lar
+    middlewares.setup(dp)
+
+    # Routerlar (tartib bilan)
+    for router in handlers.user_routers:
+        dp.include_router(router)
+    dp.include_router(handlers.errors_router)
+
+    await on_startup()
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp, on_startup=on_startup)
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Bot to'xtatildi")
