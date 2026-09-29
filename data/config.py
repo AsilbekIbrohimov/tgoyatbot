@@ -1,24 +1,32 @@
 from environs import Env
 
-# environs kutubxonasidan foydalanish
+# Sozlamalar .env fayldan o'qiladi (maxfiy ma'lumotlar kodda saqlanmaydi)
 env = Env()
 env.read_env()
-# BOT_TOKEN = '5204190868:AAGdR_cSlHjxw8S1nkkSUyoCr3lTMivjgMw'
-# ADMINS = ['1024522810']
-# .env fayl ichidan quyidagilarni o'qiymiz
-BOT_TOKEN = env.str("BOT_TOKEN", "5268428809:AAG-n1suE_60J5sJjK6gEPmuirpetxkSVFk")  # avval .env dan o'qiladi
-ADMINS = [1024522810,2090089858]#env.list("ADMINS")  # adminlar ro'yxati
-IP = 'localhost'#env.str("ip")  # Xosting ip manzili
-TELEGRAM_SUPPORT_CHAT_ID = -1001772344700#env.int('TELEGRAM_SUPPORT_CHAT_ID')
-BOT_ID=[5268428809,5419255283]#env.list('BOT_ID')
 
-# Telegram Mini App (WebApp) manzili — HTTPS bo'lishi shart.
-# Deploy qilgach o'zgartiring yoki .env da WEBAPP_URL bering.
+
+def _int_list(name, default):
+    out = []
+    for x in env.list(name, default):
+        try:
+            out.append(int(str(x).strip()))
+        except ValueError:
+            pass
+    return out
+
+
+BOT_TOKEN = env.str("BOT_TOKEN", "")                       # @BotFather tokeni (.env da bering)
+ADMINS = _int_list("ADMINS", ["1024522810", "2090089858"])  # admin ID lari
+BOT_ID = _int_list("BOT_ID", ["5268428809", "5419255283"])  # bot ID lari (feedback uchun)
+TELEGRAM_SUPPORT_CHAT_ID = env.int("TELEGRAM_SUPPORT_CHAT_ID", -1001772344700)
+IP = env.str("IP", "localhost")
+
+# Mini App (WebApp) manzili
 WEBAPP_URL = env.str("WEBAPP_URL", "https://asilbekibrohimov.github.io/oyatbot/webapp/")
 
-# Admin panel paroli (.env dagi ADMIN_PASSWORD dan o'qiladi)
+# Admin panel paroli
 ADMIN_PASSWORD = env.str("ADMIN_PASSWORD", "rtwgjmja")
 
-# Mini App admin backend (aiohttp) porti va yoqilishi
+# Mini App admin backend (aiohttp)
 WEBAPP_API_PORT = env.int("WEBAPP_API_PORT", 8080)
 WEBAPP_API_ENABLED = env.bool("WEBAPP_API_ENABLED", True)

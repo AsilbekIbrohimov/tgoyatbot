@@ -1,0 +1,29 @@
+# Mini App admin backend (port 8080) uchun HTTPS reverse proxy.
+# bot.sizningdomen.uz ni o'z domeningizga almashtiring.
+#
+# 1) DNS: bot.sizningdomen.uz -> serveringiz IP
+# 2) TLS sertifikat:  sudo certbot --nginx -d bot.sizningdomen.uz
+# 3) Bu faylni /etc/nginx/sites-available/oyatbot ga qo'ying, sites-enabled ga symlink qiling
+# 4) webapp/js/config.js dagi ADMIN_API = "https://bot.sizningdomen.uz"
+
+server {
+    listen 80;
+    server_name bot.sizningdomen.uz;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name bot.sizningdomen.uz;
+
+    ssl_certificate     /etc/letsencrypt/live/bot.sizningdomen.uz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bot.sizningdomen.uz/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
